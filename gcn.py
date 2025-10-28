@@ -19,6 +19,8 @@ parser.add_argument('--epochs', type=int, default=200)
 parser.add_argument('--use_gdc', action='store_true', help='Use GDC')
 parser.add_argument('--wandb', action='store_true', help='Track experiment')
 parser.add_argument('--random_seed', type=int, default=0)
+parser.add_argument('--log', type=bool, default=True)
+
 args = parser.parse_args()
 
 torch.manual_seed(args.random_seed)
@@ -111,6 +113,6 @@ for epoch in range(1, args.epochs + 1):
     if val_acc > best_val_acc:
         best_val_acc = val_acc
         test_acc = tmp_test_acc
-    log(Epoch=epoch, Loss=loss, Train=train_acc, Val=val_acc, Test=test_acc)
+    if args.log : log(Epoch=epoch, Loss=loss, Train=train_acc, Val=val_acc, Test=test_acc)
     times.append(time.time() - start)
-print(f'Median time per epoch: {torch.tensor(times).median():.4f}s')
+# print(f'Median time per epoch: {torch.tensor(times).median():.4f}s')
