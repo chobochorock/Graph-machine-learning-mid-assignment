@@ -20,6 +20,7 @@ parser.add_argument('--use_gdc', action='store_true', help='Use GDC')
 parser.add_argument('--wandb', action='store_true', help='Track experiment')
 parser.add_argument('--random_seed', type=int, default=0)
 parser.add_argument('--log', type=bool, default=True)
+parser.add_argument('--use_original', type=bool, default=True)
 
 args = parser.parse_args()
 
@@ -51,30 +52,49 @@ if args.use_gdc:
     )
     data = transform(data)
 
-# if args.use_original:
-class GCN(torch.nn.Module):
-    def __init__(self, in_channels, hidden_channels, out_channels):
-        super().__init__()
-        self.conv1 = GCNConv(in_channels, hidden_channels,
-                             normalize=not args.use_gdc)
-        self.conv2 = GCNConv(hidden_channels, out_channels,
-                             normalize=not args.use_gdc)
+if args.use_original:
+    class GCN(torch.nn.Module):
+        def __init__(self, in_channels, hidden_channels, out_channels):
+            super().__init__()
+            self.conv1 = GCNConv(in_channels, hidden_channels,
+                                normalize=not args.use_gdc)
+            self.conv2 = GCNConv(hidden_channels, out_channels,
+                                normalize=not args.use_gdc)
 
-    def forward(self, x, edge_index, edge_weight=None):
-        x = F.dropout(x, p=0.5, training=self.training)
-        x = self.conv1(x, edge_index, edge_weight).relu()
-        x = F.dropout(x, p=0.5, training=self.training)
-        x = self.conv2(x, edge_index, edge_weight)
-        return x
+        def forward(self, x, edge_index, edge_weight=None):
+            x = F.dropout(x, p=0.5, training=self.training)
+            x = self.conv1(x, edge_index, edge_weight).relu()
+            x = F.dropout(x, p=0.5, training=self.training)
+            x = self.conv2(x, edge_index, edge_weight)
+            return x
 
-model = GCN(
-    in_channels=dataset.num_features,
-    hidden_channels=args.hidden_channels,
-    out_channels=dataset.num_classes,
-).to(device)
+    model = GCN(
+        in_channels=dataset.num_features,
+        hidden_channels=args.hidden_channels,
+        out_channels=dataset.num_classes,
+    ).to(device)
 
-# else: 
+else: 
+    class GCN(torch.nn.Module):
+        def __init__(self, in_channels, hidden_channels, out_channels):
+            super().__init__()
+            self.conv1 = GCNConv(in_channels, hidden_channels,
+                                normalize=not args.use_gdc)
+            self.conv2 = GCNConv(hidden_channels, out_channels,
+                                normalize=not args.use_gdc)
 
+        def forward(self, x, edge_index, edge_weight=None):
+            x = F.dropout(x, p=0.5, training=self.training)
+            x = self.conv1(x, edge_index, edge_weight).relu()
+            x = F.dropout(x, p=0.5, training=self.training)
+            x = self.conv2(x, edge_index, edge_weight)
+            return x
+
+    model = GCN(
+        in_channels=dataset.num_features,
+        hidden_channels=args.hidden_channels,
+        out_channels=dataset.num_classes,
+    ).to(device)
 
 
 optimizer = torch.optim.Adam([

@@ -20,6 +20,7 @@ parser.add_argument('--epochs', type=int, default=200)
 parser.add_argument('--wandb', action='store_true', help='Track experiment')
 parser.add_argument('--random_seed', type=int, default=0)
 parser.add_argument('--log', type=bool, default=True)
+parser.add_argument('--use_original', type=bool, default=True)
 args = parser.parse_args()
 
 torch.manual_seed(args.random_seed)
@@ -39,27 +40,46 @@ path = osp.join(osp.dirname(osp.realpath(__file__)), '..', 'data', 'Planetoid')
 dataset = Planetoid(path, args.dataset, transform=T.NormalizeFeatures())
 data = dataset[0].to(device)
 
+if args.use_original: 
+    class GAT(torch.nn.Module):
+        def __init__(self, in_channels, hidden_channels, out_channels, heads):
+            super().__init__()
+            self.conv1 = GATConv(in_channels, hidden_channels, heads, dropout=0.6)
+            # On the Pubmed dataset, use `heads` output heads in `conv2`.
+            self.conv2 = GATConv(hidden_channels * heads, out_channels, heads=1,
+                                concat=False, dropout=0.6)
 
-class GAT(torch.nn.Module):
-    def __init__(self, in_channels, hidden_channels, out_channels, heads):
-        super().__init__()
-        self.conv1 = GATConv(in_channels, hidden_channels, heads, dropout=0.6)
-        # On the Pubmed dataset, use `heads` output heads in `conv2`.
-        self.conv2 = GATConv(hidden_channels * heads, out_channels, heads=1,
-                             concat=False, dropout=0.6)
-
-    def forward(self, x, edge_index):
-        x = F.dropout(x, p=0.6, training=self.training)
-        x = F.elu(self.conv1(x, edge_index))
-        x = F.dropout(x, p=0.6, training=self.training)
-        x = self.conv2(x, edge_index)
-        return x
+        def forward(self, x, edge_index):
+            x = F.dropout(x, p=0.6, training=self.training)
+            x = F.elu(self.conv1(x, edge_index))
+            x = F.dropout(x, p=0.6, training=self.training)
+            x = self.conv2(x, edge_index)
+            return x
 
 
-model = GAT(dataset.num_features, args.hidden_channels, dataset.num_classes,
-            args.heads).to(device)
-optimizer = torch.optim.Adam(model.parameters(), lr=0.005, weight_decay=5e-4)
+    model = GAT(dataset.num_features, args.hidden_channels, dataset.num_classes,
+                args.heads).to(device)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.005, weight_decay=5e-4)
+else: 
+    class GAT(torch.nn.Module):
+        def __init__(self, in_channels, hidden_channels, out_channels, heads):
+            super().__init__()
+            self.conv1 = GATConv(in_channels, hidden_channels, heads, dropout=0.6)
+            # On the Pubmed dataset, use `heads` output heads in `conv2`.
+            self.conv2 = GATConv(hidden_channels * heads, out_channels, heads=1,
+                                concat=False, dropout=0.6)
 
+        def forward(self, x, edge_index):
+            x = F.dropout(x, p=0.6, training=self.training)
+            x = F.elu(self.conv1(x, edge_index))
+            x = F.dropout(x, p=0.6, training=self.training)
+            x = self.conv2(x, edge_index)
+            return x
+
+
+    model = GAT(dataset.num_features, args.hidden_channels, dataset.num_classes,
+                args.heads).to(device)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.005, weight_decay=5e-4)
 
 def train():
     model.train()
