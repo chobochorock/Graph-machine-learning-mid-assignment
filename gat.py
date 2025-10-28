@@ -18,7 +18,12 @@ parser.add_argument('--heads', type=int, default=8)
 parser.add_argument('--lr', type=float, default=0.005)
 parser.add_argument('--epochs', type=int, default=200)
 parser.add_argument('--wandb', action='store_true', help='Track experiment')
+parser.add_argument('--random_seed', type=int, default=0)
 args = parser.parse_args()
+
+torch.manual_seed(args.random_seed)
+torch.cuda.manual_seed_all(args.random_seed)
+
 
 if torch.cuda.is_available():
     device = torch.device('cuda')

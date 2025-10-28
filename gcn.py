@@ -18,7 +18,11 @@ parser.add_argument('--lr', type=float, default=0.01)
 parser.add_argument('--epochs', type=int, default=200)
 parser.add_argument('--use_gdc', action='store_true', help='Use GDC')
 parser.add_argument('--wandb', action='store_true', help='Track experiment')
+parser.add_argument('--random_seed', type=int, default=0)
 args = parser.parse_args()
+
+torch.manual_seed(args.random_seed)
+torch.cuda.manual_seed_all(args.random_seed)
 
 device = torch_geometric.device('auto')
 
@@ -45,7 +49,7 @@ if args.use_gdc:
     )
     data = transform(data)
 
-
+# if args.use_original:
 class GCN(torch.nn.Module):
     def __init__(self, in_channels, hidden_channels, out_channels):
         super().__init__()
@@ -61,12 +65,15 @@ class GCN(torch.nn.Module):
         x = self.conv2(x, edge_index, edge_weight)
         return x
 
-
 model = GCN(
     in_channels=dataset.num_features,
     hidden_channels=args.hidden_channels,
     out_channels=dataset.num_classes,
 ).to(device)
+
+# else: 
+
+
 
 optimizer = torch.optim.Adam([
     dict(params=model.conv1.parameters(), weight_decay=5e-4),
