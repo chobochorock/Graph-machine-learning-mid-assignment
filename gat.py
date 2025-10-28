@@ -21,6 +21,7 @@ parser.add_argument('--wandb', action='store_true', help='Track experiment')
 parser.add_argument('--random_seed', type=int, default=0)
 parser.add_argument('--log', type=bool, default=True)
 parser.add_argument('--use_original', type=bool, default=True)
+parser.add_argument('--problem', type=int, default=0)
 args = parser.parse_args()
 
 torch.manual_seed(args.random_seed)
@@ -61,6 +62,7 @@ if args.use_original:
                 args.heads).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.005, weight_decay=5e-4)
 else: 
+    # this is for assignment C.
     class GAT(torch.nn.Module):
         def __init__(self, in_channels, hidden_channels, out_channels, heads):
             super().__init__()

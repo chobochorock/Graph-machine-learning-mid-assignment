@@ -21,7 +21,7 @@ parser.add_argument('--wandb', action='store_true', help='Track experiment')
 parser.add_argument('--random_seed', type=int, default=0)
 parser.add_argument('--log', type=bool, default=True)
 parser.add_argument('--use_original', type=bool, default=True)
-
+parser.add_argument('--problem', type=int, default=0)
 args = parser.parse_args()
 
 torch.manual_seed(args.random_seed)
