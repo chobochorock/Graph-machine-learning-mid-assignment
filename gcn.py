@@ -42,10 +42,15 @@ dataset = Planetoid(path, args.dataset, transform=T.NormalizeFeatures())
 data = dataset[0].to(device)
 
 if args.problem == 4: 
-    print(f'training data: {data.train_mask.count_nonzero()}') # Data(x=[2708, 1433], edge_index=[2, 10556], y=[2708], train_mask=[2708], val_mask=[2708], test_mask=[2708])
+    print(f'training data: {data.train_mask.count_nonzero()}') 
     print(f'val data: {data.val_mask.count_nonzero()}')
     print(f'test data: {data.test_mask.count_nonzero()}')
-    # print(dataset.data.x)
+    exit()
+
+if args.problem == 5:
+    from torch_geometric.utils import is_undirected
+    is_symmetric = is_undirected(data.edge_index)
+    print(f'is undirected: {is_symmetric}')
     exit()
 
 if args.problem == 1:
@@ -68,12 +73,6 @@ else:
     )
 data = transform(data)
 
-
-if largs.problem == 5:
-    from torch_geometric.utils import is_undirected
-    is_symmetric = is_undirected(data[train_mask].edge_index)
-    print(f'is undirected: {is_symmetric}')
-    exit()
 
 if args.use_original:
     class GCN(torch.nn.Module):
