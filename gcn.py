@@ -41,7 +41,23 @@ path = osp.join(osp.dirname(osp.realpath(__file__)), '..', 'data', 'Planetoid')
 dataset = Planetoid(path, args.dataset, transform=T.NormalizeFeatures())
 data = dataset[0].to(device)
 
-if args.use_gdc:
+if args.problem == 4: 
+    print(f'training data: {data.train_mask.count_nonzero()}') # Data(x=[2708, 1433], edge_index=[2, 10556], y=[2708], train_mask=[2708], val_mask=[2708], test_mask=[2708])
+    print(f'val data: {data.val_mask.count_nonzero()}')
+    print(f'test data: {data.test_mask.count_nonzero()}')
+    # print(dataset.data.x)
+    exit()
+
+if args.problem == 1:
+    transform = T.GDC(
+        self_loop_weight=1,
+        normalization_in='col',
+        normalization_out='col',
+        diffusion_kwargs=dict(method='ppr', alpha=0.05),
+        sparsification_kwargs=dict(method='topk', k=128, dim=0),
+        exact=True,
+    )
+else: 
     transform = T.GDC(
         self_loop_weight=1,
         normalization_in='sym',
@@ -50,16 +66,22 @@ if args.use_gdc:
         sparsification_kwargs=dict(method='topk', k=128, dim=0),
         exact=True,
     )
-    data = transform(data)
+data = transform(data)
 
 if args.use_original:
     class GCN(torch.nn.Module):
         def __init__(self, in_channels, hidden_channels, out_channels):
             super().__init__()
-            self.conv1 = GCNConv(in_channels, hidden_channels,
-                                normalize=not args.use_gdc)
-            self.conv2 = GCNConv(hidden_channels, out_channels,
-                                normalize=not args.use_gdc)
+            if args.problem == 3:
+                self.conv1 = GCNConv(in_channels, hidden_channels,
+                                    normalize=False)
+                self.conv2 = GCNConv(hidden_channels, out_channels,
+                                    normalize=False) #True
+            else:
+                self.conv1 = GCNConv(in_channels, hidden_channels,
+                                    normalize=not args.use_gdc)
+                self.conv2 = GCNConv(hidden_channels, out_channels,
+                                    normalize=not args.use_gdc)
 
         def forward(self, x, edge_index, edge_weight=None):
             x = F.dropout(x, p=0.5, training=self.training)
@@ -73,7 +95,7 @@ if args.use_original:
         hidden_channels=args.hidden_channels,
         out_channels=dataset.num_classes,
     ).to(device)
-
+    print(f'use normalization: {model.conv1.normalize}')
 else: 
     class GCN(torch.nn.Module):
         def __init__(self, in_channels, hidden_channels, out_channels):
