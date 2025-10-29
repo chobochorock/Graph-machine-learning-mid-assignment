@@ -68,6 +68,13 @@ else:
     )
 data = transform(data)
 
+
+if largs.problem == 5:
+    from torch_geometric.utils import is_undirected
+    is_symmetric = is_undirected(data[train_mask].edge_index)
+    print(f'is undirected: {is_symmetric}')
+
+
 if args.use_original:
     class GCN(torch.nn.Module):
         def __init__(self, in_channels, hidden_channels, out_channels):
