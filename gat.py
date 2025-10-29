@@ -41,13 +41,20 @@ path = osp.join(osp.dirname(osp.realpath(__file__)), '..', 'data', 'Planetoid')
 dataset = Planetoid(path, args.dataset, transform=T.NormalizeFeatures())
 data = dataset[0].to(device)
 
-if args.problem == 1: 
+if args.problem == 1 or args.problem == 2: 
     from torch_geometric.utils import degree
-    deg = degree(data.edge_index[0], num_nodes = len(data.num_nodes)
+    deg = degree(data.edge_index[0], num_nodes=len(data.num_nodes))
     median = deg.median()
     median_node = torch.argmin(torch.abs(deg - median))
-    print(f'median degree node: {median_node}') 
-
+    if args.problem == 1: 
+        print(f'median degree node: {median_node}')
+        exit()
+    else:
+        # In here, cannot proceed the forward process. need to use under proces.
+        conv = GATConv()
+        # attention_coefficient = conv(x, edge_index, return_attention_weights=True)
+        median_edge = data.edge_index[:, data.edge_index[0] == median_node] # add data.edge_index[1] == median_node
+        attention_coefficient = conv(median_node, median_edge, return_attention_weights=True)
 
 if args.use_original: 
     class GAT(torch.nn.Module):
