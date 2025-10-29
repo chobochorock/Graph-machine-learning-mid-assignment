@@ -41,6 +41,15 @@ path = osp.join(osp.dirname(osp.realpath(__file__)), '..', 'data', 'Planetoid')
 dataset = Planetoid(path, args.dataset, transform=T.NormalizeFeatures())
 data = dataset[0].to(device)
 
+if args.problem == 1: 
+    from torch_geometric.utils import degree
+    deg = degree(data.edge_index[0], num_nodes = len(data.num_nodes)
+    median = deg.median()
+    median_node = torch.argmin(torch.abs())
+    print(f'median degree node: {}') 
+
+    pass
+
 if args.use_original: 
     class GAT(torch.nn.Module):
         def __init__(self, in_channels, hidden_channels, out_channels, heads):
