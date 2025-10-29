@@ -73,7 +73,7 @@ if largs.problem == 5:
     from torch_geometric.utils import is_undirected
     is_symmetric = is_undirected(data[train_mask].edge_index)
     print(f'is undirected: {is_symmetric}')
-
+    exit()
 
 if args.use_original:
     class GCN(torch.nn.Module):
@@ -84,6 +84,17 @@ if args.use_original:
                                     normalize=False)
                 self.conv2 = GCNConv(hidden_channels, out_channels,
                                     normalize=False) #True
+            elif args.problem == 6:
+                self.conv1 = GCNConv(in_channels, hidden_channels,
+                                    normalize=not args.use_gdc)
+                self.conv2 = GCNConv(hidden_channels, out_channels,
+                                    normalize=not args.use_gdc)
+            elif args.problem == 7:
+                self.conv1 = GCNConv(in_channels, hidden_channels,
+                                    normalize=not args.use_gdc)
+                self.conv2 = GCNConv(hidden_channels, out_channels,
+                                    normalize=not args.use_gdc)
+                # need to add new layer
             else:
                 self.conv1 = GCNConv(in_channels, hidden_channels,
                                     normalize=not args.use_gdc)
@@ -91,10 +102,21 @@ if args.use_original:
                                     normalize=not args.use_gdc)
 
         def forward(self, x, edge_index, edge_weight=None):
-            x = F.dropout(x, p=0.5, training=self.training)
-            x = self.conv1(x, edge_index, edge_weight).relu()
-            x = F.dropout(x, p=0.5, training=self.training)
-            x = self.conv2(x, edge_index, edge_weight)
+            if args.problem == 6:
+                x = F.dropout(x, p=0.9, training=self.training)
+                x = self.conv1(x, edge_index, edge_weight).relu()
+                x = F.dropout(x, p=0.9, training=self.training)
+                x = self.conv2(x, edge_index, edge_weight)
+            elif args.problem == 7:
+                x = F.dropout(x, p=0.5, training=self.training)
+                x = self.conv1(x, edge_index, edge_weight).relu()
+                x = F.dropout(x, p=0.5, training=self.training)
+                x = self.conv2(x, edge_index, edge_weight)
+            else:
+                x = F.dropout(x, p=0.5, training=self.training)
+                x = self.conv1(x, edge_index, edge_weight).relu()
+                x = F.dropout(x, p=0.5, training=self.training)
+                x = self.conv2(x, edge_index, edge_weight)
             return x
 
     model = GCN(
