@@ -45,10 +45,9 @@ if args.problem == 1:
     from torch_geometric.utils import degree
     deg = degree(data.edge_index[0], num_nodes = len(data.num_nodes)
     median = deg.median()
-    median_node = torch.argmin(torch.abs())
-    print(f'median degree node: {}') 
+    median_node = torch.argmin(torch.abs(deg - median))
+    print(f'median degree node: {median_node}') 
 
-    pass
 
 if args.use_original: 
     class GAT(torch.nn.Module):
