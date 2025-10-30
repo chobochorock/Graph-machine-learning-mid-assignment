@@ -58,10 +58,21 @@ if args.use_original:
     class GAT(torch.nn.Module):
         def __init__(self, in_channels, hidden_channels, out_channels, heads):
             super().__init__()
-            self.conv1 = GATConv(in_channels, hidden_channels, heads, dropout=0.6)
-            # On the Pubmed dataset, use `heads` output heads in `conv2`.
-            self.conv2 = GATConv(hidden_channels * heads, out_channels, heads=1,
-                                concat=False, dropout=0.6)
+            if args.problem == 6:
+                class SameWeightGAT(GATConv):
+                    def __init__(self, *args, **kwargs):
+                        super().__init__(*args, **kwargs)
+                        self.att_dst = self.att_src
+
+                self.conv1 = SameWeightGAT(in_channels, hidden_channels, heads, dropout=0.6)
+                # On the Pubmed dataset, use `heads` output heads in `conv2`.
+                self.conv2 = SameWeightGAT(hidden_channels * heads, out_channels, heads=1,
+                                    concat=False, dropout=0.6)
+            else :
+                self.conv1 = GATConv(in_channels, hidden_channels, heads, dropout=0.6)
+                # On the Pubmed dataset, use `heads` output heads in `conv2`.
+                self.conv2 = GATConv(hidden_channels * heads, out_channels, heads=1,
+                                    concat=False, dropout=0.6)
 
         def forward(self, x, edge_index):
             x = F.dropout(x, p=0.6, training=self.training)
