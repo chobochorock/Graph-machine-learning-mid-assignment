@@ -19,9 +19,11 @@ parser.add_argument('--epochs', type=int, default=200)
 parser.add_argument('--use_gdc', action='store_true', help='Use GDC')
 parser.add_argument('--wandb', action='store_true', help='Track experiment')
 parser.add_argument('--random_seed', type=int, default=0)
-parser.add_argument('--log', type=bool, default=True)
+parser.add_argument('--log', action='store_true', help='Enable logging')
+parser.add_argument('--no-log', dest='log', action='store_false', help='Disable logging')
 parser.add_argument('--use_original', type=bool, default=True)
 parser.add_argument('--problem', type=int, default=0)
+parser.add_argument('--plot_image', type=int, default=0)
 args = parser.parse_args()
 
 torch.manual_seed(args.random_seed)
@@ -185,4 +187,25 @@ for epoch in range(1, args.epochs + 1):
         test_acc = tmp_test_acc
     if args.log : log(Epoch=epoch, Loss=loss, Train=train_acc, Val=val_acc, Test=test_acc)
     times.append(time.time() - start)
+
+if args.plot_image : 
+    # need image
+    import matplotlib.pyplot as plt
+    dataset = Planetoid(path, "Cora", transform=T.NormalizeFeatures())
+    z = model.encode(dataset.data.x,dataset.data.edge_index) #encode
+
+    emb = TSNE(n_components=2, learning_rate='auto').fit_transform(z.detach().numpy())
+    labels = dataset.data.y.detach().numpy()
+    fig, ax = plt.subplots()
+
+    number_of_colors = len(np.unique(labels))
+
+    color = ["#"+''.join([random.choice('0123456789ABCDEF') for j in range(6)])
+                for i in range(number_of_colors)]
+    for idx , i in enumerate(np.unique(labels)) :
+        emb_ = emb[np.where(labels == i ),:].squeeze()
+        ax.scatter(x=emb_[:,0],y=emb_[:,1],c=color[idx], label=i,alpha=0.2)
+    else :
+        ax.legend()
+        plt.show()
 # print(f'Median time per epoch: {torch.tensor(times).median():.4f}s')

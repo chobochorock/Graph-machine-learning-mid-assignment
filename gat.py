@@ -23,6 +23,7 @@ parser.add_argument('--log', action='store_true', help='Enable logging')
 parser.add_argument('--no-log', dest='log', action='store_false', help='Disable logging')
 parser.add_argument('--use_original', type=bool, default=True)
 parser.add_argument('--problem', type=int, default=0)
+parser.add_argument('--plot-image', type=int, default=0)
 args = parser.parse_args()
 
 torch.manual_seed(args.random_seed)
