@@ -23,7 +23,6 @@ parser.add_argument('--log', action='store_true', help='Enable logging')
 parser.add_argument('--no-log', dest='log', action='store_false', help='Disable logging')
 parser.add_argument('--use_original', type=bool, default=True)
 parser.add_argument('--problem', type=int, default=0)
-parser.add_argument('--plot-image', type=int, default=0)
 args = parser.parse_args()
 
 torch.manual_seed(args.random_seed)
@@ -138,7 +137,6 @@ for epoch in range(1, args.epochs + 1):
         best_val_acc = val_acc
         test_acc = tmp_test_acc
     if args.log : 
-        print(args.log)
         log(Epoch=epoch, Loss=loss, Train=train_acc, Val=val_acc, Test=test_acc)
     times.append(time.time() - start)
 
@@ -159,4 +157,34 @@ if args.problem == 2:
     print(f'median edges: {median_edge[1]}')
     print(f'attention coefficient: {attention_coefficient.flatten()}')
 
+if args.problem == 3 : 
+    # need image
+    import matplotlib.pyplot as plt
+    from sklearn.manifold import TSNE
+    import numpy as np
+    # dataset = Planetoid(path, "Cora", transform=T.NormalizeFeatures())
+    
+    model.eval()
+    with torch.no_grad():
+        # z = model.encode(dataset.data.x,dataset.data.edge_index) #encode
+
+        z = model.conv2(
+            F.elu(model.conv1(data.x, data.edge_index)), #data.x, 
+            data.edge_index
+        )
+
+    emb = TSNE(n_components=2, learning_rate='auto').fit_transform(z.detach().numpy())
+    labels = dataset.data.y.detach().numpy()
+    fig, ax = plt.subplots()
+
+    number_of_colors = len(np.unique(labels))
+
+    color = ["r", "g", "b", "c", "m", "y", "k"] # 이거 그냥 빨강 파랑 등으로 해도 될 듯?
+    for idx , i in enumerate(np.unique(labels)) :
+        emb_ = emb[np.where(labels == i ),:].squeeze()
+        ax.scatter(x=emb_[:,0],y=emb_[:,1],c=color[idx], label=i,alpha=0.2)
+    else :
+        ax.legend()
+        # plt.show()
+        plt.savefig('gat_result.png')
 # print(f"Median time per epoch: {torch.tensor(times).median():.4f}s")

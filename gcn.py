@@ -23,7 +23,7 @@ parser.add_argument('--log', action='store_true', help='Enable logging')
 parser.add_argument('--no-log', dest='log', action='store_false', help='Disable logging')
 parser.add_argument('--use_original', type=bool, default=True)
 parser.add_argument('--problem', type=int, default=0)
-parser.add_argument('--plot_image', type=int, default=0)
+parser.add_argument('--show_image', action='store_true', help='show node plotted image')
 args = parser.parse_args()
 
 torch.manual_seed(args.random_seed)
@@ -80,20 +80,22 @@ if args.use_original:
     class GCN(torch.nn.Module):
         def __init__(self, in_channels, hidden_channels, out_channels):
             super().__init__()
-            if args.problem == 3:
+            if args.problem == 2 or args.problem == 3:
                 self.conv1 = GCNConv(in_channels, hidden_channels,
                                     normalize=False)
                 self.conv2 = GCNConv(hidden_channels, out_channels,
                                     normalize=False) #True
             elif args.problem == 6:
                 self.conv1 = GCNConv(in_channels, hidden_channels,
-                                    normalize=not args.use_gdc)
+                                    normalize=not args.use_gdc, improved=True)
                 self.conv2 = GCNConv(hidden_channels, out_channels,
-                                    normalize=not args.use_gdc)
+                                    normalize=not args.use_gdc, improved=True)
             elif args.problem == 7:
                 self.conv1 = GCNConv(in_channels, hidden_channels,
                                     normalize=not args.use_gdc)
-                self.conv2 = GCNConv(hidden_channels, out_channels,
+                self.conv2 = GCNConv(hidden_channels, hidden_channels,
+                                    normalize=not args.use_gdc)
+                self.conv3 = GCNConv(hidden_channels, out_channels,
                                     normalize=not args.use_gdc)
                 # need to add new layer
             else:
@@ -104,15 +106,19 @@ if args.use_original:
 
         def forward(self, x, edge_index, edge_weight=None):
             if args.problem == 6:
-                x = F.dropout(x, p=0.9, training=self.training)
+                x = F.dropout(x, p=0.8, training=self.training)
                 x = self.conv1(x, edge_index, edge_weight).relu()
-                x = F.dropout(x, p=0.9, training=self.training)
+                x = F.dropout(x, p=0.2, training=self.training)
                 x = self.conv2(x, edge_index, edge_weight)
             elif args.problem == 7:
-                x = F.dropout(x, p=0.5, training=self.training)
+                x = F.dropout(x, p=0.8, training=self.training)
                 x = self.conv1(x, edge_index, edge_weight).relu()
-                x = F.dropout(x, p=0.5, training=self.training)
-                x = self.conv2(x, edge_index, edge_weight)
+                x = F.dropout(x, p=0.8, training=self.training)
+                # x_res = x
+                x = self.conv2(x, edge_index, edge_weight).relu()
+                # x = x + x_res
+                x = F.dropout(x, p=0.2, training=self.training)
+                x = self.conv3(x, edge_index, edge_weight)
             else:
                 x = F.dropout(x, p=0.5, training=self.training)
                 x = self.conv1(x, edge_index, edge_weight).relu()
@@ -188,11 +194,21 @@ for epoch in range(1, args.epochs + 1):
     if args.log : log(Epoch=epoch, Loss=loss, Train=train_acc, Val=val_acc, Test=test_acc)
     times.append(time.time() - start)
 
-if args.plot_image : 
+if args.problem == 2 or args.problem == 8 or args.show_image : 
     # need image
     import matplotlib.pyplot as plt
-    dataset = Planetoid(path, "Cora", transform=T.NormalizeFeatures())
-    z = model.encode(dataset.data.x,dataset.data.edge_index) #encode
+    from sklearn.manifold import TSNE
+    import numpy as np
+    # dataset = Planetoid(path, "Cora", transform=T.NormalizeFeatures())
+    
+    model.eval()
+    with torch.no_grad():
+        # z = model.encode(dataset.data.x,dataset.data.edge_index) #encode
+
+        z = model.conv2(
+            F.elu(model.conv1(data.x, data.edge_index)), #data.x, 
+            data.edge_index
+        )
 
     emb = TSNE(n_components=2, learning_rate='auto').fit_transform(z.detach().numpy())
     labels = dataset.data.y.detach().numpy()
@@ -200,12 +216,13 @@ if args.plot_image :
 
     number_of_colors = len(np.unique(labels))
 
-    color = ["#"+''.join([random.choice('0123456789ABCDEF') for j in range(6)])
-                for i in range(number_of_colors)]
+    color = ["r", "g", "b", "c", "m", "y", "k"] # 이거 그냥 빨강 파랑 등으로 해도 될 듯?
     for idx , i in enumerate(np.unique(labels)) :
         emb_ = emb[np.where(labels == i ),:].squeeze()
         ax.scatter(x=emb_[:,0],y=emb_[:,1],c=color[idx], label=i,alpha=0.2)
     else :
         ax.legend()
-        plt.show()
+        if args.problem == 2: plt.savefig('gcn_without_normalization_result.png')
+        elif args.problem == 8: plt.savefig('gcn_result.png')
+        elif args.show_image: plt.savefig('gcn_original_result.png')
 # print(f'Median time per epoch: {torch.tensor(times).median():.4f}s')
